@@ -27,7 +27,6 @@ class ShaderProgram {
   attrCol: number;
   ticks: number;
 
-  // Instanced-specific data
   attrTrans1: number;
   attrTrans2: number;
   attrTrans3: number;
@@ -38,15 +37,16 @@ class ShaderProgram {
   unifViewProj: WebGLUniformLocation;
   unifColor: WebGLUniformLocation;
   unifTime: WebGLUniformLocation;
-  unifWarpDir: WebGLUniformLocation;
+  unifCustomMap: Map<string, WebGLUniformLocation>;
 
-  constructor(shaders: Array<Shader>) {
+  constructor(shaders: Array<Shader>, uniforms: Array<string>) {
     this.prog = gl.createProgram();
     this.ticks = 0;
 
     for (let shader of shaders) {
       gl.attachShader(this.prog, shader.shader);
     }
+
     gl.linkProgram(this.prog);
     if (!gl.getProgramParameter(this.prog, gl.LINK_STATUS)) {
       throw gl.getProgramInfoLog(this.prog);
@@ -64,7 +64,30 @@ class ShaderProgram {
     this.unifViewProj = gl.getUniformLocation(this.prog, "u_ViewProj");
     this.unifColor = gl.getUniformLocation(this.prog, "u_Color");
     this.unifTime = gl.getUniformLocation(this.prog, "u_Time");
-    this.unifWarpDir = gl.getUniformLocation(this.prog, "u_WarpDir");
+
+    this.unifCustomMap = new Map<string, WebGLUniformLocation>();
+
+    for (let v = 0; v < uniforms.length; v++) {
+      this.unifCustomMap.set(uniforms[v], gl.getUniformLocation(this.prog, uniforms[v]));
+    }
+  }
+
+  setCustomUniform(name: string, val: any) {
+    this.use();
+    if (!this.unifCustomMap.has(name)) {
+      return;
+    }
+  
+    let handle = this.unifCustomMap.get(name);
+    if (handle === -1) {
+      return;
+    }
+  
+    if (typeof val == 'number') {
+      gl.uniform1f(handle, val);
+    } else if (typeof val == 'boolean') {
+      gl.uniform1i(handle, val ? 1 : 0);
+    }
   }
 
   use() {
@@ -109,13 +132,6 @@ class ShaderProgram {
     this.use();
     if (this.unifColor !== -1) {
       gl.uniform4fv(this.unifColor, color);
-    }
-  }
-
-  setWarpDirection(dir: vec3) {
-    this.use();
-    if (this.unifWarpDir !== -1) {
-      gl.uniform3fv(this.unifWarpDir, dir);
     }
   }
 

@@ -30,7 +30,7 @@ function sub(v1: vec3, v2: vec3) {
 }
 
 class ParticleSwarmCloud {
-    neighborhoods: Map<string, [number, vec3]>;
+    neighborhoods: Map<string, [vec3, number]>;
     particles: Array<Particle>;
     fitness: Function;
     nhSize: number;
@@ -58,28 +58,26 @@ class ParticleSwarmCloud {
         }
 
         this.nhSize = nhSize;
-        this.w = 0.4;
-        this.c1 = 0.3;
-        this.c2 = 0.3;
+        this.w = 0.6;
+        this.c1 = 0.31;
+        this.c2 = 0.01;
         this.calcNeighborhoods();
     }
 
     calcNeighborhoods() {
-        this.neighborhoods = new Map<string, [number, vec3]>();
+        this.neighborhoods = new Map<string, [vec3, number]>();
         for (let i = 0; i < this.particles.length; i++) {
             let particle = this.particles[i];
-            let nx = Math.floor(particle.p[0] / this.nhSize);
-            let ny = Math.floor(particle.p[1] / this.nhSize);
-            let nz = Math.floor(particle.p[2] / this.nhSize);
+            let nx = Math.round(Math.cos(particle.p[0] * 2) * 10);
+            let ny = Math.round(Math.sin(particle.p[1] * 2) * 10);
+            let nz = Math.round(particle.p[2] / this.nhSize);
             let coords:string = [nx, ny, nz].join(',');
 
             if (this.neighborhoods.has(coords)) {
                 let old = this.neighborhoods.get(coords);
-                if (old[0] < particle.fBest) {
-                    this.neighborhoods.set(coords, [particle.fBest, particle.pBest]);
-                }
+                this.neighborhoods.set(coords, [add(old[0], particle.p), old[1] + 1]);
             } else {
-                this.neighborhoods.set(coords, [particle.fBest, particle.pBest]);
+                this.neighborhoods.set(coords, [particle.p, 1]);
             }
         }
     }
@@ -89,30 +87,23 @@ class ParticleSwarmCloud {
             let part = this.particles[i];
             let inertial = sm(this.w, part.v);
 
+            let f:vec3 = this.fitness(part.p, part.mp);
             let r1 = Math.random();
             let r2 = Math.random();
-            let pd = sm(this.c1 * r1, sub(part.pBest, part.p));
+            let pd = sm(this.c1 * r1, sub(f, part.p));
 
-            let nx = Math.floor(part.p[0] / this.nhSize);
-            let ny = Math.floor(part.p[1] / this.nhSize);
-            let nz = Math.floor(part.p[2] / this.nhSize);
-            let gBest = this.neighborhoods.get([nx, ny, nz].join(','))[1];
+            let nx = Math.round(Math.cos(part.p[0] * 2) * 10);
+            let ny = Math.round(Math.sin(part.p[1] * 2) * 10);
+            let nz = Math.round(part.p[2] / this.nhSize);
+            let g = this.neighborhoods.get([nx, ny, nz].join(','));
+            let gBest = sm(1/g[1], g[0]);
             let gd = sm(this.c2 * r2, sub(gBest, part.p));
             let tv = add(inertial, add(pd, gd))
+            //tv = add(tv, vec3.fromValues((Math.random() - 0.5) / 50, (Math.random() - 0.5) / 50, (Math.random() - 0.5) / 50));
+            
             let len = vec3.length(tv);
             part.v = len == 0 ? part.v : sm(1/len, tv);
-            let ll = vec3.length(part.v);
-            if (len == 0) {
-                console.log('ohhh');
-            }
             part.p = add(sm(0.01, part.v), part.p);
-            let f = this.fitness(part.p, part.mp);
-            if (f >= part.fBest) {
-                part.fBest = f;
-                part.pBest = part.p;
-            }
-
-            part.mp = add(sm(0.001, part.p), sm(0.999, part.mp));
         }
 
         this.calcNeighborhoods();

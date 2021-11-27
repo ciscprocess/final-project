@@ -13,10 +13,12 @@ class Instanced extends Drawable {
   transCol4: Float32Array;
 
   numInstances: number;
+  bufCol: WebGLBuffer;
   bufTrans1: WebGLBuffer;
   bufTrans2: WebGLBuffer;
   bufTrans3: WebGLBuffer;
   bufTrans4: WebGLBuffer;
+  colGenerated: boolean = false;
   trans1Generated: boolean = false;
   trans2Generated: boolean = false;
   trans3Generated: boolean = false;
@@ -28,6 +30,7 @@ class Instanced extends Drawable {
   }
 
   create() {
+    this.generateCol();
     this.generateTrans1();
     this.generateTrans2();
     this.generateTrans3();
@@ -38,15 +41,10 @@ class Instanced extends Drawable {
     transMats: Array<mat4>,
     colors: Array<vec4>) {
 
-    // Set up instanced rendering data arrays here.
-    // This example creates a set of positional
-    // offsets and gradiated colors for a 100x100 grid
-    // of squares, even though the VBO data for just
-    // one square is actually passed to the GPU
     let trans1Array:Array<number> = [];
-    let trans2Array:Array<number>  = [];
-    let trans3Array:Array<number>  = [];
-    let trans4Array:Array<number>  = [];
+    let trans2Array:Array<number> = [];
+    let trans3Array:Array<number> = [];
+    let trans4Array:Array<number> = [];
     let colorsArray = [];
 
     for (let i = 0; i < transMats.length; i++) {
@@ -79,7 +77,6 @@ class Instanced extends Drawable {
     }
 
     let colorFloats: Float32Array = new Float32Array(colorsArray);
-    
     this.setNumInstances(transMats.length);
 
     this.colors = colorFloats;
@@ -88,6 +85,9 @@ class Instanced extends Drawable {
     this.transCol3 = new Float32Array(trans3Array);
     this.transCol4 = new Float32Array(trans4Array);
 
+    if (!this.bindCol()) {
+      console.error("Instance col not bound!");
+    }
     gl.bufferData(gl.ARRAY_BUFFER, this.colors, gl.STATIC_DRAW);
 
     if (!this.bindTrans1()) {
@@ -111,12 +111,38 @@ class Instanced extends Drawable {
     gl.bufferData(gl.ARRAY_BUFFER, this.transCol4, gl.STATIC_DRAW);
   }
 
-  updatePosVBOs(action: Function) {
+  updateTransVBOs(action: Function) {
     action(this.transCol1, this.transCol2, this.transCol3, this.transCol4);
+
+    if (!this.bindCol()) {
+      console.error("Instance col not bound!");
+    }
+    gl.bufferData(gl.ARRAY_BUFFER, this.colors, gl.STATIC_DRAW);
+
+    if (!this.bindTrans1()) {
+      console.error("1st trans column not generated!");
+    };
     gl.bufferData(gl.ARRAY_BUFFER, this.transCol1, gl.STATIC_DRAW);
+
+    if (!this.bindTrans2()) {
+      console.error("2nd trans column not generated!");
+    };
     gl.bufferData(gl.ARRAY_BUFFER, this.transCol2, gl.STATIC_DRAW);
+
+    if (!this.bindTrans3()) {
+      console.error("3rd trans column not generated!");
+    };
     gl.bufferData(gl.ARRAY_BUFFER, this.transCol3, gl.STATIC_DRAW);
+
+    if (!this.bindTrans4()) {
+      console.error("4th trans column not generated!");
+    };
     gl.bufferData(gl.ARRAY_BUFFER, this.transCol4, gl.STATIC_DRAW);
+  }
+
+  generateCol() {
+    this.colGenerated = true;
+    this.bufCol = gl.createBuffer();
   }
 
   generateTrans1() {
@@ -137,6 +163,14 @@ class Instanced extends Drawable {
   generateTrans4() {
     this.trans4Generated = true;
     this.bufTrans4 = gl.createBuffer();
+  }
+
+  bindCol(): boolean {
+    if (this.colGenerated) {
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.bufCol);
+    }
+
+    return this.colGenerated;
   }
 
   bindTrans1(): boolean {
@@ -170,6 +204,7 @@ class Instanced extends Drawable {
 
     return this.trans4Generated;
   }
+
   setNumInstances(num: number) {
     this.numInstances = num;
   }
