@@ -1,4 +1,4 @@
-import { vec4, vec3, mat4 } from 'gl-matrix';
+import { vec4, vec3, vec2, mat4 } from 'gl-matrix';
 import Drawable from './Drawable';
 import Instanced from './Instanced';
 import { gl } from '../../globals';
@@ -32,6 +32,8 @@ class ShaderProgram {
   attrTrans3: number;
   attrTrans4: number;
 
+  unifEye: WebGLUniformLocation;
+  unifDimensions: WebGLUniformLocation;
   unifModel: WebGLUniformLocation;
   unifModelInvTr: WebGLUniformLocation;
   unifViewProj: WebGLUniformLocation;
@@ -65,6 +67,8 @@ class ShaderProgram {
     this.unifColor = gl.getUniformLocation(this.prog, "u_Color");
     this.unifTime = gl.getUniformLocation(this.prog, "u_Time");
 
+    this.unifEye = gl.getUniformLocation(this.prog, 'u_Eye');
+    this.unifDimensions = gl.getUniformLocation(this.prog, 'u_Dimensions');
     this.unifCustomMap = new Map<string, WebGLUniformLocation>();
 
     for (let v = 0; v < uniforms.length; v++) {
@@ -135,6 +139,18 @@ class ShaderProgram {
     }
   }
 
+  setEye(eye: vec3) {
+    if (this.unifEye !== -1) {
+      gl.uniform3fv(this.unifEye, eye);
+    }
+  }
+
+  setDimensions(dim: ArrayLike<number>) {
+    if (this.unifDimensions !== -1) {
+      gl.uniform2iv(this.unifDimensions, dim);
+    }
+  }
+
   draw(d: Drawable) {
     if (d instanceof Instanced) {
       this.drawInstanced(d);
@@ -146,6 +162,7 @@ class ShaderProgram {
     if (this.attrPos != -1 && d.bindPos()) {
       gl.enableVertexAttribArray(this.attrPos);
       gl.vertexAttribPointer(this.attrPos, 4, gl.FLOAT, false, 0, 0);
+      gl.vertexAttribDivisor(this.attrPos, 0);
     }
 
     if (this.attrNor != -1 && d.bindNor()) {

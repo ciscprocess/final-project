@@ -36,5 +36,6 @@ void main()
     fs_Nor = vec4(invTranspose * vec3(vs_Nor), 0);
     fs_Pos = vec4(dynaRot * preRotScale * vs_Pos.xyz + vs_Trans4.xyz, 1.f);
     fs_UV = vs_UV;
+
     gl_Position = u_ViewProj * fs_Pos;
 }
