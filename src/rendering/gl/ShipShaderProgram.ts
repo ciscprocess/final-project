@@ -7,7 +7,6 @@ import Ship from '../../geometry/Ship';
 class ShipShaderProgram extends ShaderProgram {
     attrDirection: number;
     attrUV: number;
-    unifSampler: WebGLUniformLocation;
 
     constructor(uniforms: Array<string>) {
         super([
@@ -17,7 +16,6 @@ class ShipShaderProgram extends ShaderProgram {
 
         this.attrDirection = gl.getAttribLocation(this.prog, "vs_Direction");
         this.attrUV = gl.getAttribLocation(this.prog, "vs_UV");
-        this.unifSampler = gl.getUniformLocation(this.prog, "u_Sampler");
     }
 
     draw(d: Drawable) {
@@ -38,16 +36,6 @@ class ShipShaderProgram extends ShaderProgram {
         }
 
         this.drawInstanced(d);
-    }
-
-    setTexture(texture: WebGLTexture) {
-        if (this.unifSampler === -1) {
-            console.error('Sampler not bound!');
-        }
-
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.uniform1i(this.unifSampler, 0);
     }
 };
 

@@ -8,6 +8,10 @@ abstract class Drawable {
   bufNor: WebGLBuffer;
   bufUV: WebGLBuffer;
 
+  bufCol: WebGLBuffer;
+  colGenerated: boolean = false;
+  cols: Float32Array;
+
   idxBound: boolean = false;
   posBound: boolean = false;
   norBound: boolean = false;
@@ -40,6 +44,19 @@ abstract class Drawable {
   generateUV() {
     this.uvBound = true;
     this.bufUV = gl.createBuffer();
+  }
+
+  generateCol() {
+    this.bufCol = gl.createBuffer();
+    this.colGenerated = true;
+  }
+
+  bindCol() {
+      if (this.colGenerated) {
+          gl.bindBuffer(gl.ARRAY_BUFFER, this.bufCol);
+      }
+
+      return this.colGenerated;
   }
 
   bindIdx(): boolean {

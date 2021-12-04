@@ -1,5 +1,6 @@
 #version 300 es
 precision highp float;
+precision highp int;
 
 uniform mat4 u_InvViewProj;
 uniform ivec2 u_Dimensions;
@@ -23,17 +24,17 @@ void main()
     vec2 ndc = (gl_FragCoord.xy / vec2(u_Dimensions)) * 2.0 - 1.0;
 
     vec4 p = vec4(ndc.xy, 1, 1);
-    p *= 1000.0;
+    p *= 1.0;
     p = u_InvViewProj * p;
 
     out_Col = vec4(0.f, 0.f, 0.f, 1.f);
     vec3 rayDir = normalize(p.xyz - u_Eye);
-    for (int i = 0; i < 100; i++) {
-        vec3 starDir = normalize(
-            random3(vec3(float(i), 1.f + float(i), 1.f)) - vec3(0.5, 0.5, 0.5)
-        );
-        if (dot(starDir, rayDir) > 0.999995) {
-            out_Col = vec4(1.f, 1.f, 1.f, 1.f);
-        }
+    vec3 rayOctants = sign(rayDir);
+    for (int i = 0; i < 40; i++) {
+        vec3 starDir = normalize(random3(vec3(float(i), 1.f + float(i), 2.f)) * rayOctants);
+        
+        const float rayDotMax = 0.99999995;
+        const vec3 white = vec3(1.f);
+        out_Col = max(vec4(white * exp((dot(starDir, rayDir) - rayDotMax) * 130000.f), 1.f), out_Col);
     }
 }

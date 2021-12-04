@@ -25,6 +25,20 @@ class BoidFlock1987 extends GenericBoidFlock {
 
             let d = sub(sm(1 / neighbors.length, np), boid.x);
             vec3.add(d, d, sm(0.4, displacement));
+
+            // BEGIN HARD-CODED SPHERE SDF!!
+            let surface = sm(8, vec3.normalize(vec3.create(), boid.x));
+            let goalDiff = sub(surface, boid.x);
+            vec3.add(d, d, sm(0.2, goalDiff));
+            // END
+
+            // BEGIN directionm matching
+            for (let j = 0; j < neighbors.length; j++) {
+                let nb = neighbors[j];
+                vec3.add(d, d, sm(0.2, nb[1].v));
+            }
+            // END
+
             vec3.normalize(d, d);
             boid.v = add(sm(0.97, boid.v), sm(0.03, d));
             vec3.normalize(boid.v, boid.v);

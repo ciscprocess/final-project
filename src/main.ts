@@ -15,6 +15,7 @@ import BoidFlock1987 from './swarm/BoidFlock1987';
 import BoidFlock from './swarm/BoidFlock';
 import SpaceShaderProgram from './rendering/gl/SpaceShaderProgram';
 import ScreenQuad from './geometry/ScreenQuad';
+import ProceduralPlanet from './geometry/ProceduralPlanet';
 
 export interface IIndexable {
   [key: string]: any;
@@ -31,6 +32,10 @@ const controls : IIndexable = {
 let ship: Ship;
 let quad: ScreenQuad;
 let flock: BoidFlock;
+let planet: ProceduralPlanet;
+let planet2: ProceduralPlanet;
+let planet3: ProceduralPlanet;
+let sun: Icosphere;
 
 function loadScene() {
   ship = new Ship(vec3.fromValues(0, 0, 0), 'StarSparrow01.obj', 'StarSparrow_Red.png');
@@ -38,6 +43,24 @@ function loadScene() {
 
   quad = new ScreenQuad();
   quad.create();
+
+  planet = new ProceduralPlanet(vec3.fromValues(0, 0, 0), 2, 0);
+  planet.create();
+  planet.deformSurface();
+  planet.generateColorMapTexture();
+
+  planet2 = new ProceduralPlanet(vec3.fromValues(0, 0, 0), 1.4, 2);
+  planet2.create();
+  planet2.deformSurface();
+  planet2.generateColorMapTexture();
+
+  planet3 = new ProceduralPlanet(vec3.fromValues(0, 0, 0), 3, 2);
+  planet3.create();
+  planet3.deformSurface();
+  planet3.generateColorMapTexture();
+
+  sun = new Icosphere(vec3.create(), 4, 5);
+  sun.create();
 
   let id = mat4.create();
   mat4.identity(id);
@@ -89,7 +112,12 @@ function main() {
 
   // get canvas and webgl context
   const canvas = <HTMLCanvasElement>document.getElementById('canvas');
+  //const canvas2 = <HTMLCanvasElement>document.getElementById('canvas2');
   const gl = <WebGL2RenderingContext>canvas.getContext('webgl2');
+  // const ctx = canvas2.getContext('2d');
+  // if (!ctx) {
+  //   alert("can't render previews");
+  // }
   if (!gl) {
     alert('WebGL 2 not supported!');
   }
@@ -100,6 +128,8 @@ function main() {
 
   // Initial call to load scene
   loadScene();
+  //ctx.fillRect(25, 25, 100, 100);
+  //ctx.putImageData(planet.imDat, 0, 0);
 
   const camera = new Camera(vec3.fromValues(0, 0, 5), vec3.fromValues(0, 0, 0));
   const renderer = new OpenGLRenderer(canvas);
@@ -116,6 +146,11 @@ function main() {
   const lambert = new ShaderProgram([
     new Shader(gl.VERTEX_SHADER, require('./shaders/lambert-vert.glsl')),
     new Shader(gl.FRAGMENT_SHADER, require('./shaders/lambert-frag.glsl')),
+  ], uniformVars);
+
+  const sunShader = new ShaderProgram([
+    new Shader(gl.VERTEX_SHADER, require('./shaders/sun-vert.glsl')),
+    new Shader(gl.FRAGMENT_SHADER, require('./shaders/sun-frag.glsl')),
   ], uniformVars);
 
   const shipShader = new ShipShaderProgram(uniformVars);
@@ -159,6 +194,15 @@ function main() {
 
     renderer.render(camera, spaceShader, [quad]);
     renderer.render(camera, shipShader, [ship]);
+    lambert.setTextureSlot(planet.colorTexture, 1);
+    renderer.render(camera, lambert, [planet], mat4.translate(mat4.create(), mat4.identity(mat4.create()), vec3.fromValues(7, 0, 0)));
+    lambert.setTextureSlot(planet2.colorTexture, 2);
+    renderer.render(camera, lambert, [planet2], mat4.translate(mat4.create(), mat4.identity(mat4.create()), vec3.fromValues(-7, 0, 0)));
+    lambert.setTextureSlot(planet2.colorTexture, 3);
+    renderer.render(camera, lambert, [planet2], mat4.translate(mat4.create(), mat4.identity(mat4.create()), vec3.fromValues(-2, 0, 7)));
+    renderer.render(camera, sunShader, [sun]);
+
+    sunShader.tickTime();
     stats.end();
 
     // Tell the browser to call `tick` again whenever it renders a new frame

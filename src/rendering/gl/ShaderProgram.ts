@@ -39,6 +39,7 @@ class ShaderProgram {
   unifViewProj: WebGLUniformLocation;
   unifColor: WebGLUniformLocation;
   unifTime: WebGLUniformLocation;
+  unifSampler: WebGLUniformLocation;
   unifCustomMap: Map<string, WebGLUniformLocation>;
 
   constructor(shaders: Array<Shader>, uniforms: Array<string>) {
@@ -67,6 +68,7 @@ class ShaderProgram {
     this.unifColor = gl.getUniformLocation(this.prog, "u_Color");
     this.unifTime = gl.getUniformLocation(this.prog, "u_Time");
 
+    this.unifSampler = gl.getUniformLocation(this.prog, "u_Sampler");
     this.unifEye = gl.getUniformLocation(this.prog, 'u_Eye');
     this.unifDimensions = gl.getUniformLocation(this.prog, 'u_Dimensions');
     this.unifCustomMap = new Map<string, WebGLUniformLocation>();
@@ -170,11 +172,18 @@ class ShaderProgram {
       gl.vertexAttribPointer(this.attrNor, 4, gl.FLOAT, false, 0, 0);
     }
 
+    if (this.attrCol != -1 && d.bindCol()) {
+      gl.enableVertexAttribArray(this.attrCol);
+      gl.vertexAttribPointer(this.attrCol, 4, gl.FLOAT, false, 0, 0);
+      gl.vertexAttribDivisor(this.attrCol, 0);
+    }
+
     d.bindIdx();
     gl.drawElements(d.drawMode(), d.elemCount(), gl.UNSIGNED_INT, 0);
 
     if (this.attrPos != -1) gl.disableVertexAttribArray(this.attrPos);
     if (this.attrNor != -1) gl.disableVertexAttribArray(this.attrNor);
+    if (this.attrCol != -1)gl.disableVertexAttribArray(this.attrCol);
   }
 
   drawInstanced(d: Instanced) {
@@ -226,6 +235,36 @@ class ShaderProgram {
     if (this.attrTrans2 != -1) gl.disableVertexAttribArray(this.attrTrans2);
     if (this.attrTrans3 != -1) gl.disableVertexAttribArray(this.attrTrans3);
     if (this.attrTrans4 != -1) gl.disableVertexAttribArray(this.attrTrans4);
+  }
+
+  setTexture(texture: WebGLTexture) {
+    if (this.unifSampler === -1) {
+        console.error('Sampler not bound!');
+    }
+
+    this.use();
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.uniform1i(this.unifSampler, 0);
+  }
+
+  setTextureSlot(texture: WebGLTexture, slot: number) {
+    if (this.unifSampler === -1) {
+        console.error('Sampler not bound!');
+    }
+
+    this.use();
+    let glSlot = gl.TEXTURE0;
+    switch (slot) {
+      case 1: glSlot = gl.TEXTURE1; break;
+      case 2: glSlot = gl.TEXTURE2; break;
+      case 3: glSlot = gl.TEXTURE3; break;
+      case 4: glSlot = gl.TEXTURE4; break;
+      case 5: glSlot = gl.TEXTURE5; break;
+    }
+    gl.activeTexture(glSlot);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.uniform1i(this.unifSampler, slot);
   }
 };
 

@@ -14,7 +14,7 @@ out vec4 fs_Col;
 
 void main()
 {
-    fs_Pos = u_Model * vs_Pos;
+    fs_Pos = vs_Pos;
     fs_Col = vs_Col;
     fs_Nor = vs_Nor;
 
