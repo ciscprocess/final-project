@@ -39,7 +39,7 @@ void main() {
     
     vec3 p2x = dFdx(p2);
     vec3 p2y = dFdy(p2);
-    normal = mix(normal, normalize(cross(p2x, p2y)), 0.8);
+    normal = modelInvTr * mix(normal, normalize(cross(p2x, p2y)), 0.8);
 
     //normal = modelInvTr * transformNormal(p, p2, normal, 0);
     float base = getDesertBase(p);
@@ -52,7 +52,7 @@ void main() {
 
     float diffuseTerm = dot(normalize(normal.xyz), normalize(lightSource.xyz - mp2));
     diffuseTerm = clamp(diffuseTerm, 0.f, 1.f);
-    float ambientTerm = 0.2;
+    float ambientTerm = 0.3;
     float lightIntensity = diffuseTerm + ambientTerm; 
     float bf_highlight = max(pow(diffuseTerm, 12.f), 0.f);
     out_Col = vec4(diffuseColor.rgb * (lightIntensity + bf_highlight), diffuseColor.a);

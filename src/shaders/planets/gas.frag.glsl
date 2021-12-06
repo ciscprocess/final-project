@@ -30,7 +30,8 @@ void main() {
     vec4 diffuseColor = vec4(pow(colorWheelGas(val) + 1.f, vec3(2.f)) - 1.f, 1.f);
     float diffuseTerm = dot(normalize(normal.xyz), normalize(lightSource.xyz - gp));
     diffuseTerm = clamp(diffuseTerm, 0.f, 1.f);
-    float ambientTerm = 0.2;
+    float ambientTerm = 0.3;
+    float bf_highlight = max(pow(diffuseTerm, 12.f), 0.f);
     float lightIntensity = diffuseTerm + ambientTerm; 
-    out_Col = vec4(diffuseColor.rgb * lightIntensity, diffuseColor.a);
+    out_Col = vec4(diffuseColor.rgb * (lightIntensity + bf_highlight), diffuseColor.a);
 }

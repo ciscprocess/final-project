@@ -63,7 +63,7 @@ void main() {
     diffuseColor = getBiomeColor(p, normal.xyz, mountain, forest, grass, biome, normal);
     float diffuseTerm = dot(normalize(normal.xyz), normalize(lightSource.xyz - mp2));
     diffuseTerm = clamp(diffuseTerm, 0.f, 1.f);
-    float ambientTerm = 0.2;
+    float ambientTerm = 0.3;
     float lightIntensity = diffuseTerm + ambientTerm; 
     float bf_highlight = max(pow(diffuseTerm, 12.f), 0.f);
     out_Col = vec4(diffuseColor.rgb * (lightIntensity + bf_highlight), diffuseColor.a);

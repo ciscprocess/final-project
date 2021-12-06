@@ -4,6 +4,8 @@ import PlanetField from "./PlanetField";
 
 class BoidFlock1987 extends GenericBoidFlock {
     average: vec3;
+
+    inertia: number = 0.97;
     constructor(
         n: number,
         nhSize: number,
@@ -51,7 +53,7 @@ class BoidFlock1987 extends GenericBoidFlock {
             // BEGIN attract to planets
             for (let planet of this.planets.planets) {
                 let dir = sub(planet.x, boid.x);
-                let dist = vec3.len(dir);
+                let dist = vec3.len(dir) - planet.r;
                 vec3.normalize(dir, dir);
                 vec3.add(d, d, sm(0.3 * (1 / (dist + 0.00000001)) * planet.neediness(), dir));
             }
@@ -61,7 +63,7 @@ class BoidFlock1987 extends GenericBoidFlock {
             for (let planet of this.planets.planets) {
                 planet.visit(boid.x);
                 let dist = vec3.distance(boid.x, planet.x) - planet.r;
-                vec3.add(d, d, sm(1 / (dist * dist + 0.0000001), sub(boid.x, planet.x)));
+                vec3.add(d, d, sm(10 / (dist * dist * dist + 0.0000001), sub(boid.x, planet.x)));
             }
             // END
 

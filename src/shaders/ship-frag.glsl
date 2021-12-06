@@ -20,7 +20,7 @@ void main()
     diffuseTerm = clamp(diffuseTerm, 0.f, 1.f);
     diffuseTerm = smoothstep(0.f, 1.f, diffuseTerm);
 
-    float ambientTerm = 0.2f;
+    float ambientTerm = 0.3f;
     float lightIntensity = diffuseTerm + ambientTerm;
     out_Col = vec4(diffuseColor.xyz * lightIntensity, 1.f);
 }

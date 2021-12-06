@@ -2,19 +2,19 @@
 precision highp float;
 precision highp int;
 
+const float u_GrassCutoff = 0.5;
+const float u_MountainCutoff = 0.59;
+const float u_ForestCutoff = 0.3;
+const float u_NormDifferential = 0.001;
+const float u_MountainSpacing = 0.005;
+const float u_MountainGrassCutoff = 0.01;
+
 uniform int u_Time;
 uniform float u_Seed;
-uniform float u_GrassCutoff;
-uniform float u_MountainCutoff;
-uniform float u_ForestCutoff;
-uniform float u_NormDifferential;
-uniform float u_MountainSpacing;
-uniform bool u_SymmetricNorm;
-uniform float u_MountainGrassCutoff;
 uniform vec3 u_CameraEye;
 
 float randomNoise2(vec3 p, float seed) {
-    return fract(sin(dot(p, vec3(12.9898, -78.233, 133.999)))  * (43758.5453 + seed));
+    return fract(sin(dot(p, vec3(12.9898, -78.233, 133.999)))  * (43758.5453 + seed + u_Seed));
 }
 
 float randomNoise3(vec2 co){
@@ -226,13 +226,13 @@ vec3 transformNormal(vec3 p, vec3 dp, vec3 normal, int biome) {
 }
 
 float getDesertBase(vec3 p) {
-    float m = fbmPerlin(p, 0.4f, 1.f, 245.f, 1, 0.3f, 3.5f) * 0.8f;
+    float m = fbmPerlin(p, 0.4f, 1.f, 245.f + u_Seed, 1, 0.3f, 3.5f) * 0.8f;
     m = clamp(m, 0.4, 10.f);
     return m;
 }
 
 float getDesertGarnish(vec3 p) {
-    float layer = fbmPerlin(p * 3.5f, 0.4f, 1.f, 245.f, 2, 0.3f, 3.5f) * 0.8 * 0.3;
+    float layer = fbmPerlin(p * 3.5f, 0.4f, 1.f, 245.f + u_Seed, 2, 0.3f, 3.5f) * 0.8 * 0.3;
     return layer;
 }
 float getDesertMembership(float base, float garnish) {

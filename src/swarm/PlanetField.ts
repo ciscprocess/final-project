@@ -5,6 +5,7 @@ class Planet {
     rungV: number;
     r: number;
     x: vec3;
+    type: string;
 
     localYAngle: number;
     localZAngle: number;
@@ -44,7 +45,6 @@ class Planet {
         if ((vec3.dist(p, this.x) - this.r) < this.personalBubble && !this.madeHappy) {
             this.madeHappy = true;
             this.unhappiness = Math.max(0, this.unhappiness - 10);
-            console.log('made happy!');
         }
     }
 
@@ -71,7 +71,7 @@ class PlanetField {
         this.rings = rings;
     }
 
-    addPlanet(pRadius: number, ring: number, startAngle: number) {
+    addPlanet(pRadius: number, ring: number, startAngle: number, type: string = 'gas') {
         let step = this.radius / this.rings;
         let r = step * ring;
 
@@ -83,8 +83,9 @@ class PlanetField {
         planet.localZAngle = 0;
         planet.r = pRadius;
         planet.updateTransform();
-        planet.sunAngleV =  3 * (0.001 + (Math.random() - 0.01) / 1000.) / r;
+        planet.sunAngleV =  3 * (0.001 + (Math.random() - 0.01) / 500.) / r;
         planet.yAngleV =   2 * (0.001 + (Math.random() - 0.01) / 1000.);
+        planet.type = type;
         
         this.planets.push(planet);
 

@@ -26,20 +26,8 @@ export interface IIndexable {
 // Define an object with application parameters and button callbacks
 // This will be referred to by dat.GUI's functions that add GUI elements.
 const controls : IIndexable = {
-  u_InertiaWeight: 0.6,
-  u_IndividualWeight: 0.39,
-  u_GroupWeight: 0.01,
-
   u_Seed: 0,
-  u_GrassCutoff: 0.5,
-  u_MountainCutoff: 0.59,
-  u_ForestCutoff: 0.3,
-  u_MountainSpacing: 0.005,
-  u_DeformTerrain: true,
-  u_ColorTerrain: true,
-  u_SymmetricNorm: false,
-  u_NormDifferential: 0.001,
-  u_MountainGrassCutoff: 0.01
+  'Inertia': 0.6
 };
 
 let fb: Framebuffer;
@@ -67,13 +55,13 @@ function loadScene() {
   planet.create();
 
   planetField = new PlanetField(20, 7);
-  planetField.addPlanet(1, 3, 0);
-  planetField.addPlanet(1.5, 5, 0);
-  planetField.addPlanet(1.2, 8, 0);
-  planetField.addPlanet(0.7, 10, 0);
-  planetField.addPlanet(1.5, 12, 0);
-  planetField.addPlanet(1.5, 14, 0);
-  planetField.addPlanet(1.5, 17, 0);
+  planetField.addPlanet(1, 3, 0, 'desert');
+  planetField.addPlanet(1.5, 5, 0, 'gas');
+  planetField.addPlanet(1.2, 8, 0, 'ocean');
+  planetField.addPlanet(0.7, 10, 0, 'gas');
+  planetField.addPlanet(1.5, 12, 0, 'rock');
+  planetField.addPlanet(1.5, 14, 0, 'desert');
+  planetField.addPlanet(1.5, 17, 0, 'rock');
   //planetField.addPlanet(1, 4, 0.4);
 
   sun = new Icosphere(vec3.create(), planetField.sunRadius, 5);
@@ -169,10 +157,16 @@ function main() {
     }
   }
 
-  const planetShader = new ShaderProgram([
-    new Shader(gl.VERTEX_SHADER, require('./shaders/planets/shared.glsl') + '\n' + require('./shaders/planets/rock.vert.glsl')),
-    new Shader(gl.FRAGMENT_SHADER, require('./shaders/planets/shared.glsl') + '\n' + require('./shaders/planets/rock.frag.glsl')),
-  ], uniformVars);
+  const planetShaders : IIndexable = {};
+
+  for (let planet of ['desert', 'gas', 'ocean', 'rock']) {
+    planetShaders[planet] = new ShaderProgram([
+      new Shader(gl.VERTEX_SHADER, require('./shaders/planets/shared.glsl') + '\n' + require('./shaders/planets/' + planet +'.vert.glsl')),
+      new Shader(gl.FRAGMENT_SHADER, require('./shaders/planets/shared.glsl') + '\n' + require('./shaders/planets/' + planet + '.frag.glsl'))
+    ], uniformVars);
+  }
+
+
 
   const sunShader = new ShaderProgram([
     new Shader(gl.VERTEX_SHADER, require('./shaders/sun-vert.glsl')),
@@ -207,7 +201,9 @@ function main() {
     renderer.clear();
     for (let key in controls) {
       if (key.startsWith("u_")) {
-        planetShader.setCustomUniform(key, controls[key]);
+        for (let type in planetShaders) {
+          planetShaders[type].setCustomUniform(key, controls[key]);
+        }
       }
     }
   
@@ -232,15 +228,15 @@ function main() {
       }
     });
 
-    planetShader.setCameraEye(camera.controls.eye);
-
     renderer.render(camera, spaceShader, [quad]);
     for (let plan of planetField.planets) {
+      let planetShader = planetShaders[plan.type];
+      planetShader.setCameraEye(camera.controls.eye);
       plan.updateTransform();
       planetShader.setCustomUniform('u_Seed', plan.id);
       renderer.render(camera, planetShader, [planet], plan.transform);
-      //plan.localYAngle -= plan.yAngleV;
-      //plan.angleAroundSun += plan.sunAngleV;
+      plan.localYAngle -= plan.yAngleV;
+      plan.angleAroundSun += plan.sunAngleV;
     }
     renderer.render(camera, sunShader, [sun]);
     renderer.render(camera, shipShader, [ship]);
