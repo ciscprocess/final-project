@@ -27,7 +27,12 @@ export interface IIndexable {
 // This will be referred to by dat.GUI's functions that add GUI elements.
 const controls : IIndexable = {
   u_Seed: 0,
-  'Inertia': 0.6
+  'Inertia': 0.97,
+  'Direction Matching': 0.1,
+  'Base Goal': 0.07,
+  'Planet Attraction': 0.3,
+  'Neighbor Attraction': 0.01,
+  'N. collision Weight': 0.4
 };
 
 let fb: Framebuffer;
@@ -35,7 +40,7 @@ let fb2: Framebuffer;
 let ship: Ship;
 let quad: ScreenQuad;
 let quad2: ScreenQuad;
-let flock: BoidFlock;
+let flock: BoidFlock1987;
 let planet: Icosphere;
 let sun: Icosphere;
 let planetField: PlanetField;
@@ -58,8 +63,8 @@ function loadScene() {
   planetField.addPlanet(1, 3, 0, 'desert');
   planetField.addPlanet(1.5, 5, 0, 'gas');
   planetField.addPlanet(1.2, 8, 0, 'ocean');
-  planetField.addPlanet(0.7, 10, 0, 'gas');
-  planetField.addPlanet(1.5, 12, 0, 'rock');
+  planetField.addPlanet(0.7, 10, 0, 'rock');
+  planetField.addPlanet(1.5, 12, 0, 'gas');
   planetField.addPlanet(1.5, 14, 0, 'desert');
   planetField.addPlanet(1.5, 17, 0, 'rock');
   //planetField.addPlanet(1, 4, 0.4);
@@ -72,9 +77,9 @@ function loadScene() {
   mat4.identity(id);
   let instanceMats = new Array<mat4>();
   let instanceCols = new Array<vec4>();
-  const numShips = 100;
+  const numShips = 200;
 
-  flock = new BoidFlock1987(numShips, 2, vec3.dist, planetField);
+  flock = new BoidFlock1987(numShips, 1000, vec3.dist, planetField);
 
   for (let i = 0; i < flock.boids.length; i++) {
     let part = flock.boids[i];
@@ -115,6 +120,14 @@ function main() {
       gui.add(controls, v);
     }
   }
+
+  gui.add(controls, 'Inertia', -1, 1, 0.01);
+  gui.add(controls, 'Direction Matching', -1, 1, 0.01);
+  gui.add(controls, 'Base Goal', -1, 1, 0.01);
+  gui.add(controls, 'Planet Attraction', -1, 1, 0.01);
+  gui.add(controls, 'Neighbor Attraction', -1, 1, 0.01);
+  gui.add(controls, 'N. collision Weight', -1, 1, 0.01);
+
 
   // get canvas and webgl context
   const canvas = <HTMLCanvasElement>document.getElementById('canvas');
@@ -166,8 +179,6 @@ function main() {
     ], uniformVars);
   }
 
-
-
   const sunShader = new ShaderProgram([
     new Shader(gl.VERTEX_SHADER, require('./shaders/sun-vert.glsl')),
     new Shader(gl.FRAGMENT_SHADER, require('./shaders/sun-frag.glsl')),
@@ -194,6 +205,12 @@ function main() {
 
   // This function will be called every frame
   function tick() {
+    flock.inertia = controls['Inertia'];
+    flock.directionW = controls['Direction Matching'];
+    flock.sdfGoalW = controls['Base Goal'];
+    flock.planetAttrW = controls['Planet Attraction'];
+    flock.neighborAttrW = controls['Neighbor Attraction'];
+    flock.neighborColW = controls['N. collision Weight'];
     camera.update();
     stats.begin();
     fb.bind();

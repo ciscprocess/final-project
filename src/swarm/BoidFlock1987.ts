@@ -6,6 +6,14 @@ class BoidFlock1987 extends GenericBoidFlock {
     average: vec3;
 
     inertia: number = 0.97;
+    directionW: number = 0.1;
+    sdfGoalW: number = 0.07;
+    planetColW: number = 10;
+    planetAttrW: number = 0.3;
+    neighborAttrW: number = 0.01;
+    neighborColW: number = 0.4;
+    speedW: number = 0.06;
+
     constructor(
         n: number,
         nhSize: number,
@@ -25,7 +33,7 @@ class BoidFlock1987 extends GenericBoidFlock {
         let newAverage = vec3.create();
         for (let i = 0; i < this.boids.length; i++) {
             let boid = this.boids[i];
-            boid.x = add(sm(0.06, boid.v), boid.x);
+            boid.x = add(sm(this.speedW, boid.v), boid.x);
             let neighbors = this.getClosestBoids(boid, 5);
             let np = vec3.create();
             let displacement = vec3.create();
@@ -36,26 +44,28 @@ class BoidFlock1987 extends GenericBoidFlock {
             }
 
             let d = sub(sm(1 / neighbors.length, np), boid.x);
-            vec3.add(d, sm(0.01, d), sm(0.4, displacement));
+            vec3.add(d, sm(this.neighborAttrW, d), sm(this.neighborColW, displacement));
 
             // BEGIN avoid average pos
             // let away = vec3.create();
             // vec3.sub(away, boid.x, this.average);
             // vec3.normalize(away, away);
             // vec3.add(d, d, sm(0.2, away));
-
             // END
+
             // BEGIN avoid sun
             let sunDist = vec3.length(boid.x) - this.planets.sunRadius;
             vec3.add(d, d, sm(1 / (sunDist * sunDist + 0.0000001), boid.x));
             // END
 
             // BEGIN attract to planets
+            let pid = 1;
             for (let planet of this.planets.planets) {
                 let dir = sub(planet.x, boid.x);
                 let dist = vec3.len(dir) - planet.r;
                 vec3.normalize(dir, dir);
-                vec3.add(d, d, sm(0.3 * (1 / (dist + 0.00000001)) * planet.neediness(), dir));
+                vec3.add(d, d, sm(pid * this.planetAttrW * (1 / (dist + 0.00000001)) * planet.neediness(), dir));
+                pid += 0.5;
             }
             // END
 
@@ -63,25 +73,25 @@ class BoidFlock1987 extends GenericBoidFlock {
             for (let planet of this.planets.planets) {
                 planet.visit(boid.x);
                 let dist = vec3.distance(boid.x, planet.x) - planet.r;
-                vec3.add(d, d, sm(10 / (dist * dist * dist + 0.0000001), sub(boid.x, planet.x)));
+                vec3.add(d, d, sm(this.planetColW / (dist * dist * dist + 0.0000001), sub(boid.x, planet.x)));
             }
             // END
 
             // BEGIN HARD-CODED SPHERE SDF!!
             let surface = sm(8, vec3.normalize(vec3.create(), boid.x));
             let goalDiff = sub(surface, boid.x);
-            vec3.add(d, d, sm(0.07, goalDiff));
+            vec3.add(d, d, sm(this.sdfGoalW, goalDiff));
             // END
 
             // BEGIN direction matching
             for (let j = 0; j < neighbors.length; j++) {
                 let nb = neighbors[j];
-                vec3.add(d, d, sm(0.1, nb[1].v));
+                vec3.add(d, d, sm(this.directionW, nb[1].v));
             }
             // END
 
             vec3.normalize(d, d);
-            boid.v = add(sm(0.97, boid.v), sm(0.03, d));
+            boid.v = add(sm(this.inertia, boid.v), sm(1 - this.inertia, d));
             vec3.normalize(boid.v, boid.v);
 
             vec3.add(newAverage, newAverage, boid.x);
