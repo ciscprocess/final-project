@@ -224,3 +224,92 @@ vec3 transformNormal(vec3 p, vec3 dp, vec3 normal, int biome) {
 
     return normalize(cross(dp - db, dp - dt));
 }
+
+float getDesertBase(vec3 p) {
+    float m = fbmPerlin(p, 0.4f, 1.f, 245.f, 1, 0.3f, 3.5f) * 0.8f;
+    m = clamp(m, 0.4, 10.f);
+    return m;
+}
+
+float getDesertGarnish(vec3 p) {
+    float layer = fbmPerlin(p * 3.5f, 0.4f, 1.f, 245.f, 2, 0.3f, 3.5f) * 0.8 * 0.3;
+    return layer;
+}
+float getDesertMembership(float base, float garnish) {
+    return base * 1.5f + garnish;
+}
+
+vec3 deformTerrainDesert(vec3 p) {
+    float mod = getDesertMembership(getDesertBase(p), getDesertGarnish(p));
+    return p * (1.f + mod / 2.) / 2.;
+}
+
+// float getRockNoise(vec3 p) {
+//     return fbmPerlin(p, 0.2f, 1.f, 245.f, 3, 0.4f, 3.5f);
+// }
+
+// vec3 deformRockTerrain(vec3 p, float noise) {
+//     return p * (1. + noise);
+// }
+
+const float PI2 = 2.f * 3.14159;
+ const float PId2 = 3.14159 / 2.;
+vec3 cart2Sph(float x, float y, float z) {
+     float r = length(vec3(x, y, z));
+     float phi = acos(z / r);
+     float theta = PId2 + asin(y / (sin(phi) * r));
+     return vec3(theta, phi, r);
+}
+
+vec3 sph2Cart(float r, float theta, float phi) {
+    return vec3(
+        r * cos(theta) * sin(phi),
+        r * sin(theta) * sin(phi),
+        r * cos(phi));
+}
+
+struct Worley {
+    vec3 diff;
+    vec3 point;
+};
+
+const float WORLEY_SQUARES = 20.f;
+Worley worley_noise(vec3 uv) {
+    vec3 uv_w = uv * WORLEY_SQUARES;
+    vec3 uv_int = floor(uv_w);
+    float min_dist = 999999.f;
+    vec3 min_diff = vec3(0, 0, 0);
+    vec3 min_point = vec3(0, 0, 0);
+    for (int z = -1; z <=1; z++) {
+        for (int y = -1; y <= 1; y++) {
+            for (int x = -1; x <= 1; x++) {
+                vec3 neighbor = uv_int +  vec3(float(x), float(y), float(z));
+
+                // Work off of absolute coords to help my ailing brain...
+                vec3 point = (neighbor + vec3(randomNoise2(neighbor.xyz, 1.f + u_Seed), randomNoise2(neighbor.xyz, 2.f + u_Seed), randomNoise2(neighbor.xyz, 3.f + u_Seed))) / WORLEY_SQUARES;
+                vec3 diff = point - uv;
+                float lness = 2.f;
+                float dist = pow(pow(diff.x, lness) + pow(diff.y, lness), 1.f / lness);
+                if (dist < min_dist) {
+                    min_dist = dist;
+                    min_diff = -diff;
+                    min_point = point;
+                }
+            }
+        }
+    }
+    Worley ww;
+    ww.diff = min_diff;
+    ww.point = min_point;
+    return ww;
+}
+
+float getRockNoise(vec3 p) {
+    Worley noise = worley_noise(p / 10.f);
+    p = (p + noise.point) * length(noise.diff) * 1.3;
+    return fbmPerlin(p * 10., 0.2f, 1.f, 871.f + u_Seed, 2, 0.4f, 3.5f);
+}
+
+vec3 deformRockTerrain(vec3 p, float noise) {
+    return p * (1. + noise);
+}

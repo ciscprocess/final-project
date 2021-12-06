@@ -11,7 +11,7 @@ void main() {
     vec3 p = vs_Pos.xyz;
     fs_Pos = vec4(p, 1.f);
 
-    p = deformTerrainDesert(p);
+    p = deformRockTerrain(p, getRockNoise(p));
 
     fs_Nor = vs_Nor;
     vec4 modelposition = u_Model * vec4(p, 1.f);

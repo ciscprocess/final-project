@@ -16,7 +16,7 @@ vec3 colorWheelGas(float angle) {
 void main() {
     vec3 p = fs_Pos.xyz;
     vec3 gp = fs_PosGlobal.xyz;
-    vec3 lightSource = vec3(0.f);;
+    vec3 lightSource = vec3(0.f);
 
     vec3 normal = fs_Nor.xyz;
 

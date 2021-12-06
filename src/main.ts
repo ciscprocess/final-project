@@ -170,8 +170,8 @@ function main() {
   }
 
   const planetShader = new ShaderProgram([
-    new Shader(gl.VERTEX_SHADER, require('./shaders/planets/shared.glsl') + '\n' + require('./shaders/planets/gas.vert.glsl')),
-    new Shader(gl.FRAGMENT_SHADER, require('./shaders/planets/shared.glsl') + '\n' + require('./shaders/planets/gas.frag.glsl')),
+    new Shader(gl.VERTEX_SHADER, require('./shaders/planets/shared.glsl') + '\n' + require('./shaders/planets/rock.vert.glsl')),
+    new Shader(gl.FRAGMENT_SHADER, require('./shaders/planets/shared.glsl') + '\n' + require('./shaders/planets/rock.frag.glsl')),
   ], uniformVars);
 
   const sunShader = new ShaderProgram([
