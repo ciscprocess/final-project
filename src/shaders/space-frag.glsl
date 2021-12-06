@@ -34,7 +34,16 @@ void main()
         vec3 starDir = normalize(random3(vec3(float(i), 1.f + float(i), 2.f)) * rayOctants);
         
         const float rayDotMax = 0.99999995;
-        const vec3 white = vec3(1.f);
-        out_Col = max(vec4(white * exp((dot(starDir, rayDir) - rayDotMax) * 130000.f), 1.f), out_Col);
+        const float rayDotMin = 0.99999;
+
+        vec3 props = random3(vec3(float(i), 1.f + float(i), 5.f));
+        float rayDotThresh = mix(rayDotMin, rayDotMax, props.x);
+
+        //const float rayDotMax = 0.99997;
+        vec3 white = vec3(1.f) * mix(0.2, 1., props.y);
+        out_Col = max(vec4(white * exp((dot(starDir, rayDir) - rayDotThresh) * 130000.f), 1.f), out_Col);
+    //     if (dot(starDir, rayDir) > rayDotMax) {
+    //         out_Col = vec4(1.f);
+    //     }
     }
 }

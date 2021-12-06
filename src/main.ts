@@ -16,6 +16,8 @@ import BoidFlock from './swarm/BoidFlock';
 import SpaceShaderProgram from './rendering/gl/SpaceShaderProgram';
 import ScreenQuad from './geometry/ScreenQuad';
 import ProceduralPlanet from './geometry/ProceduralPlanet';
+import Framebuffer from './rendering/gl/Framebuffer';
+import PlanetField from './swarm/PlanetField';
 
 export interface IIndexable {
   [key: string]: any;
@@ -26,16 +28,29 @@ export interface IIndexable {
 const controls : IIndexable = {
   u_InertiaWeight: 0.6,
   u_IndividualWeight: 0.39,
-  u_GroupWeight: 0.01
+  u_GroupWeight: 0.01,
+
+  u_Seed: 0,
+  u_GrassCutoff: 0.5,
+  u_MountainCutoff: 0.59,
+  u_ForestCutoff: 0.3,
+  u_MountainSpacing: 0.005,
+  u_DeformTerrain: true,
+  u_ColorTerrain: true,
+  u_SymmetricNorm: false,
+  u_NormDifferential: 0.001,
+  u_MountainGrassCutoff: 0.01
 };
 
+let fb: Framebuffer;
+let fb2: Framebuffer;
 let ship: Ship;
 let quad: ScreenQuad;
+let quad2: ScreenQuad;
 let flock: BoidFlock;
-let planet: ProceduralPlanet;
-let planet2: ProceduralPlanet;
-let planet3: ProceduralPlanet;
+let planet: Icosphere;
 let sun: Icosphere;
+let planetField: PlanetField;
 
 function loadScene() {
   ship = new Ship(vec3.fromValues(0, 0, 0), 'StarSparrow01.obj', 'StarSparrow_Red.png');
@@ -44,31 +59,34 @@ function loadScene() {
   quad = new ScreenQuad();
   quad.create();
 
-  planet = new ProceduralPlanet(vec3.fromValues(0, 0, 0), 2, 0);
+  quad2 = new ScreenQuad(-0.001);
+  quad2.create();
+
+
+  planet = new Icosphere(vec3.fromValues(0, 0, 0), 1, 5);
   planet.create();
-  planet.deformSurface();
-  planet.generateColorMapTexture();
 
-  planet2 = new ProceduralPlanet(vec3.fromValues(0, 0, 0), 1.4, 2);
-  planet2.create();
-  planet2.deformSurface();
-  planet2.generateColorMapTexture();
+  planetField = new PlanetField(20, 7);
+  planetField.addPlanet(1, 3, 0);
+  planetField.addPlanet(1.5, 5, 0);
+  planetField.addPlanet(1.2, 8, 0);
+  planetField.addPlanet(0.7, 10, 0);
+  planetField.addPlanet(1.5, 12, 0);
+  planetField.addPlanet(1.5, 14, 0);
+  planetField.addPlanet(1.5, 17, 0);
+  //planetField.addPlanet(1, 4, 0.4);
 
-  planet3 = new ProceduralPlanet(vec3.fromValues(0, 0, 0), 3, 2);
-  planet3.create();
-  planet3.deformSurface();
-  planet3.generateColorMapTexture();
-
-  sun = new Icosphere(vec3.create(), 4, 5);
+  sun = new Icosphere(vec3.create(), planetField.sunRadius, 5);
   sun.create();
+
 
   let id = mat4.create();
   mat4.identity(id);
   let instanceMats = new Array<mat4>();
   let instanceCols = new Array<vec4>();
-  const numShips = 200;
+  const numShips = 100;
 
-  flock = new BoidFlock1987(numShips, 2);
+  flock = new BoidFlock1987(numShips, 2, vec3.dist, planetField);
 
   for (let i = 0; i < flock.boids.length; i++) {
     let part = flock.boids[i];
@@ -128,13 +146,21 @@ function main() {
 
   // Initial call to load scene
   loadScene();
+  fb = new Framebuffer(window.innerWidth, window.innerHeight);
+  fb.clear();
+  fb2 = new Framebuffer(window.innerWidth, window.innerHeight);
+  fb2.clear();
   //ctx.fillRect(25, 25, 100, 100);
   //ctx.putImageData(planet.imDat, 0, 0);
 
-  const camera = new Camera(vec3.fromValues(0, 0, 5), vec3.fromValues(0, 0, 0));
+  const camera = new Camera(vec3.fromValues(0, 0, 10), vec3.fromValues(0, 0, 0));
   const renderer = new OpenGLRenderer(canvas);
-  renderer.setClearColor(0.2, 0.2, 0.2, 1);
+  renderer.setClearColor(0,0,1,0);
   gl.enable(gl.DEPTH_TEST);
+
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  gl.blendEquation(gl.FUNC_ADD);
 
   let uniformVars = [];
   for (let key in controls) {
@@ -143,14 +169,29 @@ function main() {
     }
   }
 
-  const lambert = new ShaderProgram([
-    new Shader(gl.VERTEX_SHADER, require('./shaders/lambert-vert.glsl')),
-    new Shader(gl.FRAGMENT_SHADER, require('./shaders/lambert-frag.glsl')),
+  const planetShader = new ShaderProgram([
+    new Shader(gl.VERTEX_SHADER, require('./shaders/planets/shared.glsl') + '\n' + require('./shaders/planets/gas.vert.glsl')),
+    new Shader(gl.FRAGMENT_SHADER, require('./shaders/planets/shared.glsl') + '\n' + require('./shaders/planets/gas.frag.glsl')),
   ], uniformVars);
 
   const sunShader = new ShaderProgram([
     new Shader(gl.VERTEX_SHADER, require('./shaders/sun-vert.glsl')),
     new Shader(gl.FRAGMENT_SHADER, require('./shaders/sun-frag.glsl')),
+  ], uniformVars);
+
+  const postShader = new ShaderProgram([
+    new Shader(gl.VERTEX_SHADER, require('./shaders/post/passthrough.vert.glsl')),
+    new Shader(gl.FRAGMENT_SHADER, require('./shaders/post/vertical-blur.frag.glsl')),
+  ], uniformVars);
+
+  const horizShader = new ShaderProgram([
+    new Shader(gl.VERTEX_SHADER, require('./shaders/post/passthrough.vert.glsl')),
+    new Shader(gl.FRAGMENT_SHADER, require('./shaders/post/horizontal-blur.frag.glsl')),
+  ], uniformVars);
+
+  const passthrough = new ShaderProgram([
+    new Shader(gl.VERTEX_SHADER, require('./shaders/post/passthrough.vert.glsl')),
+    new Shader(gl.FRAGMENT_SHADER, require('./shaders/post/passthrough.frag.glsl')),
   ], uniformVars);
 
   const shipShader = new ShipShaderProgram(uniformVars);
@@ -161,16 +202,15 @@ function main() {
   function tick() {
     camera.update();
     stats.begin();
+    fb.bind();
     gl.viewport(0, 0, window.innerWidth, window.innerHeight);
-    //renderer.clear();
-    
-    // for (let key in controls) {
-    //   if (key.startsWith("u_")) {
-    //     lambert.setCustomUniform(key, controls[key]);
-    //     shipShader.setCustomUniform(key, controls[key]);
-    //   }
-    // }
-
+    renderer.clear();
+    for (let key in controls) {
+      if (key.startsWith("u_")) {
+        planetShader.setCustomUniform(key, controls[key]);
+      }
+    }
+  
     flock.stepBoids();
     ship.updateTransVBOs(function(t1: Float32Array, t2: Float32Array, t3: Float32Array, t4: Float32Array) {
       let ships = flock.boids;
@@ -192,15 +232,29 @@ function main() {
       }
     });
 
+    planetShader.setCameraEye(camera.controls.eye);
+
     renderer.render(camera, spaceShader, [quad]);
-    renderer.render(camera, shipShader, [ship]);
-    lambert.setTextureSlot(planet.colorTexture, 1);
-    renderer.render(camera, lambert, [planet], mat4.translate(mat4.create(), mat4.identity(mat4.create()), vec3.fromValues(7, 0, 0)));
-    lambert.setTextureSlot(planet2.colorTexture, 2);
-    renderer.render(camera, lambert, [planet2], mat4.translate(mat4.create(), mat4.identity(mat4.create()), vec3.fromValues(-7, 0, 0)));
-    lambert.setTextureSlot(planet2.colorTexture, 3);
-    renderer.render(camera, lambert, [planet2], mat4.translate(mat4.create(), mat4.identity(mat4.create()), vec3.fromValues(-2, 0, 7)));
+    for (let plan of planetField.planets) {
+      plan.updateTransform();
+      planetShader.setCustomUniform('u_Seed', plan.id);
+      renderer.render(camera, planetShader, [planet], plan.transform);
+      //plan.localYAngle -= plan.yAngleV;
+      //plan.angleAroundSun += plan.sunAngleV;
+    }
     renderer.render(camera, sunShader, [sun]);
+    renderer.render(camera, shipShader, [ship]);
+
+    fb2.bind();
+    renderer.clear();
+    postShader.setTextureSlot(fb.texture, 1);
+    gl.viewport(0, 0, window.innerWidth, window.innerHeight);
+    renderer.render(camera, postShader, [quad]);
+
+    fb2.clear();
+    horizShader.setTextureSlot(fb2.texture, 1);
+    gl.viewport(0, 0, window.innerWidth, window.innerHeight);
+    renderer.render(camera, horizShader, [quad]);
 
     sunShader.tickTime();
     stats.end();
@@ -213,6 +267,8 @@ function main() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     camera.setAspectRatio(window.innerWidth / window.innerHeight);
     camera.updateProjectionMatrix();
+    fb.resize(window.innerWidth, window.innerHeight);
+    fb2.resize(window.innerWidth, window.innerHeight);
   }, false);
 
   renderer.setSize(window.innerWidth, window.innerHeight);

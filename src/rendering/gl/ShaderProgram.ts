@@ -25,6 +25,7 @@ class ShaderProgram {
   attrPos: number;
   attrNor: number;
   attrCol: number;
+  attrUV: number;
   ticks: number;
 
   attrTrans1: number;
@@ -40,6 +41,7 @@ class ShaderProgram {
   unifColor: WebGLUniformLocation;
   unifTime: WebGLUniformLocation;
   unifSampler: WebGLUniformLocation;
+  unifCameraEye: WebGLUniformLocation;
   unifCustomMap: Map<string, WebGLUniformLocation>;
 
   constructor(shaders: Array<Shader>, uniforms: Array<string>) {
@@ -58,6 +60,7 @@ class ShaderProgram {
     this.attrPos = gl.getAttribLocation(this.prog, "vs_Pos");
     this.attrNor = gl.getAttribLocation(this.prog, "vs_Nor");
     this.attrCol = gl.getAttribLocation(this.prog, "vs_Col");
+    this.attrUV = gl.getAttribLocation(this.prog, "vs_UV");
     this.attrTrans1 = gl.getAttribLocation(this.prog, "vs_Trans1");
     this.attrTrans2 = gl.getAttribLocation(this.prog, "vs_Trans2");
     this.attrTrans3 = gl.getAttribLocation(this.prog, "vs_Trans3");
@@ -71,6 +74,7 @@ class ShaderProgram {
     this.unifSampler = gl.getUniformLocation(this.prog, "u_Sampler");
     this.unifEye = gl.getUniformLocation(this.prog, 'u_Eye');
     this.unifDimensions = gl.getUniformLocation(this.prog, 'u_Dimensions');
+    this.unifCameraEye = gl.getUniformLocation(this.prog, "u_CameraEye");
     this.unifCustomMap = new Map<string, WebGLUniformLocation>();
 
     for (let v = 0; v < uniforms.length; v++) {
@@ -107,7 +111,6 @@ class ShaderProgram {
     this.use();
     if (this.unifTime !== -1) {
       gl.uniform1i(this.unifTime, this.ticks++);
-      console.log('tiiicks: ' + this.ticks);
     } else {
       console.log('Cannot find time var.');
     }
@@ -153,6 +156,13 @@ class ShaderProgram {
     }
   }
 
+  setCameraEye(eye: vec3) {
+    this.use();
+    if (this.unifCameraEye !== -1) {
+      gl.uniform3fv(this.unifCameraEye, eye);
+    }
+  }
+
   draw(d: Drawable) {
     if (d instanceof Instanced) {
       this.drawInstanced(d);
@@ -178,12 +188,19 @@ class ShaderProgram {
       gl.vertexAttribDivisor(this.attrCol, 0);
     }
 
+    if (this.attrUV != -1 && d.bindUV()) {
+      gl.enableVertexAttribArray(this.attrUV);
+      gl.vertexAttribPointer(this.attrUV, 2, gl.FLOAT, false, 0, 0);
+      gl.vertexAttribDivisor(this.attrUV, 0);
+  }
+
     d.bindIdx();
     gl.drawElements(d.drawMode(), d.elemCount(), gl.UNSIGNED_INT, 0);
 
     if (this.attrPos != -1) gl.disableVertexAttribArray(this.attrPos);
     if (this.attrNor != -1) gl.disableVertexAttribArray(this.attrNor);
-    if (this.attrCol != -1)gl.disableVertexAttribArray(this.attrCol);
+    if (this.attrCol != -1) gl.disableVertexAttribArray(this.attrCol);
+    if (this.attrUV != -1) gl.disableVertexAttribArray(this.attrUV);
   }
 
   drawInstanced(d: Instanced) {

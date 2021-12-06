@@ -175,7 +175,7 @@ void main()
     t = 1.3f * fbmPerlin(vec3(p.x + t, p.y + t2, p.z) + vec3(0.f, 0.f, 1.f) * iTime / 10.f, 0.3f, 0.f, 2.f, 1, 0.6, 3.f);
     vec3 col = firePalette(bias(t, 0.65));
 
-    out_Col = vec4(col, 1.f);//vec4(diffuseColor.xyz * lightIntensity, 1.f);
+    out_Col = vec4(col, 1.f); //vec4(diffuseColor.xyz * lightIntensity, 1.f);
 
     // if (sph.x < 0. || sph.y < 0. || sph.z < 0.) {
     //     out_Col = vec4(1., 0., 0., 1.);

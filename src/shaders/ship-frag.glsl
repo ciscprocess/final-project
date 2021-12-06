@@ -16,8 +16,9 @@ void main()
 {
     vec4 diffuseColor = texture(u_Sampler, fs_UV);
 
-    float diffuseTerm = dot(normalize(fs_Nor), normalize(lightPos - fs_Pos));
+    float diffuseTerm = 0.5 + dot(normalize(fs_Nor), normalize(lightPos - fs_Pos));
     diffuseTerm = clamp(diffuseTerm, 0.f, 1.f);
+    diffuseTerm = smoothstep(0.f, 1.f, diffuseTerm);
 
     float ambientTerm = 0.2f;
     float lightIntensity = diffuseTerm + ambientTerm;
