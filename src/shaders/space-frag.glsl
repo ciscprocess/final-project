@@ -19,6 +19,16 @@ vec3 random3( vec3 p ) {
                  *43758.5453);
 }
 
+vec3 colorWheelStars(float angle) {
+    // [[1.008 0.908 0.898] [0.088 -0.052 0.058] [1.648 1.518 2.348] [0.000 0.308 0.667]]
+    vec3 a = vec3(1.008, 0.908, 0.898);
+    vec3 b = vec3(0.088, -0.052, 0.058);
+    vec3 c = vec3(1.648, 1.518, 2.348);
+    vec3 d = vec3(0.000, 0.308, 0.667);
+    return (a + b * cos(2.f * 3.14159 * (c * angle + d)));
+}
+
+
 void main()
 {
     vec2 ndc = (gl_FragCoord.xy / vec2(u_Dimensions)) * 2.0 - 1.0;
@@ -40,7 +50,7 @@ void main()
         float rayDotThresh = mix(rayDotMin, rayDotMax, props.x);
 
         //const float rayDotMax = 0.99997;
-        vec3 white = vec3(1.f) * mix(0.2, 1., props.y);
+        vec3 white = colorWheelStars(props.x * 2.f) * mix(0.2, 1., props.y);
         out_Col = max(vec4(white * exp((dot(starDir, rayDir) - rayDotThresh) * 130000.f), 1.f), out_Col);
     //     if (dot(starDir, rayDir) > rayDotMax) {
     //         out_Col = vec4(1.f);
