@@ -8,6 +8,11 @@ experimented with a handful of different flocking/swarming algorithms, and ended
 up settling on a custom Boids-influenced algorithm based on touring around the
 generated solar system.
 
+The planets get lonely, and only the swarming ships can make them feel better!
+Over time, planets gain in loneliness and thus become needy. The neediness grows
+super-linearly so even if ships are far away, the increasing rate of neediness
+will cause ships to go beserk if the planets are ignored too long.
+
 <p align="center">
   <img src="https://user-images.githubusercontent.com/6472567/145521127-db6b299d-b546-48be-b97d-6eae4f3409f8.png">
 </p>
