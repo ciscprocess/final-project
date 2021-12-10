@@ -3,7 +3,8 @@
 precision highp float;
 precision highp int;
 in vec2 fs_UV;
-out vec4 out_Col;
+layout (location = 0) out vec4 out_Col;
+layout (location = 1) out vec4 out_Col2;
 uniform ivec2 u_Dimensions;
 
 uniform sampler2D u_Sampler;
@@ -28,4 +29,5 @@ const int bounds = 10;
 void main()
 {
     out_Col = texture(u_Sampler, fs_UV);
+    out_Col2 = vec4(0.);
 }

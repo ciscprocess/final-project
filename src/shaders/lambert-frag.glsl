@@ -8,7 +8,8 @@ in vec4 fs_Pos;
 in vec4 fs_Nor;
 in vec4 fs_Col;
 
-out vec4 out_Col;
+layout (location = 0) out vec4 out_Col;
+layout (location = 1) out vec4 out_Col2;
 
 const vec4 lightPos = vec4(0, 0, 0, 1.f);
 
@@ -27,6 +28,7 @@ void main()
     float ambientTerm = 0.3;
     float lightIntensity = diffuseTerm + ambientTerm;
     out_Col = vec4(diffuseColor.xyz * lightIntensity, 1.f);
+    out_Col2 = vec4(0.);
 
     // if (sph.x < 0. || sph.y < 0. || sph.z < 0.) {
     //     out_Col = vec4(1., 0., 0., 1.);

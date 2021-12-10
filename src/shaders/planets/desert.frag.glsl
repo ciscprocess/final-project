@@ -1,6 +1,7 @@
 in vec4 fs_Pos;
 in vec4 fs_Nor;
-out vec4 out_Col;
+layout (location = 0) out vec4 out_Col;
+layout (location = 1) out vec4 out_Col2;
 uniform mat4 u_Model;
 
 vec3 colorWheelDesert(float angle) {
@@ -56,5 +57,6 @@ void main() {
     float lightIntensity = diffuseTerm + ambientTerm; 
     float bf_highlight = max(pow(diffuseTerm, 12.f), 0.f);
     out_Col = vec4(diffuseColor.rgb * (lightIntensity + bf_highlight), diffuseColor.a);
+    out_Col2 = vec4(0.f);
     //out_Col = vec4(1.f, 0.,0., 1.);
 }

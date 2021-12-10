@@ -3,57 +3,86 @@ Nathaniel Korzekwa
 
 ## Introduction
 The idea behind this project is to implement a space-themed simulation of
-spaceships (or optionally other agents) exhibiting swarm behavior. The main focus
-is to allow the ships/agents to swarm using Particle Search Optimization and
-Stochastic Diffusion Search according to density fields. These fields can either
-be generated procedurally or uploaded.
+spaceships (or optionally other agents) exhibiting swarm behavior. I
+experimented with a handful of different flocking/swarming algorithms, and ended
+up settling on a custom Boids-influenced algorithm based on touring around the
+generated solar system.
 
-If time allows, I also hope to explore some more swarm algorithms and behaviors
-and perhaps also explore the interaction of such swarm algorithms with inputs
-other than density fields.
+<p align="center">
+  <img src="https://user-images.githubusercontent.com/6472567/145521127-db6b299d-b546-48be-b97d-6eae4f3409f8.png">
+</p>
+<p align="center">Default scene.</p>
 
-## Goal
-I hope to achieve a visually polished, animated 3D scene replete with swarming
-agents, space decor, and parameter tuning. This idea can be extended in an
-exciting number of ways, but I am trying to keep the scope limited, at least
-initially.
+## Features
+### Star Backdrop
+The stars in the backdrop are pretty simple, and they are based off of the idea
+behind Adam Mally's 'procedural skybox' as presented in CIS 560. Rays are cast
+from the origin based on the world-space position of the fragment coordinate.
 
-## Inspiration/reference
-The main reference point I will be using the material in this
-[textbook](https://link.springer.com/content/pdf/10.1007%2F978-3-642-36955-1.pdf).
-There is a shockingly large amount of good information in there, but I will be
-specifically referencing: "Swarmic Sketches and Attention Mechanism" by Mohammad
-Majid al-Rifaie1 and John Mark Bishop.
+From that, we can get a normalized 'ray' vector from the origin, and stars are
+represented as specific points on a sphere. The 'ray' vector is can be dotted
+with the vector representing the star's position on the unit spehere, and an
+exponential falloff function is used to create a blurred radius.
 
-## Specification
-The following features will be added, in loose order of importance. Note that 
-asterisk-tagged items are probably examples of scope creep and I will treat them
-as optional.
+I had originally hoped (and may revisit) the idea of adding nebulae noise to the
+backdrop but that might be a project in and of itself unless I wanted to directly
+take some work from elsewhere.
 
-1. Swarmic Engine for simulating swarming agents through a density field.
-2. Smooth animation in 3D of the swarming agents.
-3. Employing some kind of agent model (probably a spaceship) for the agents, and
-the associated animation and lighting of said model.
-4. Ability to upload (or at least choose from a list of) density fields that the
-ships will follow
-5. Space backdrop similar to procedural skybox with at least stars (and
-optionally cool patterns like nebulae)
-6. 1-3 Simple procedural planets or suns around which the agents can swarm (*).
-7. Ability to procedurally generate density fields for unique swarming patterns (*).
+<p align="center">
+  <img src="https://user-images.githubusercontent.com/6472567/145521125-67c28125-4e68-40f4-9306-cf2e624e808e.png">
+</p>
+<p align="center">The stars.</p>
 
-## Techniques
-I will use the techniques outlined in [the paper linked above](https://link.springer.com/content/pdf/10.1007%2F978-3-642-36955-1.pdf). In particular, this paper discusses Stochastic
-Diffusion Search along with Particle Swarm Optimization. I may only need to end
-up implementing one of them, but I will evaluate that as I get results.
+### Procedural Planets
+Extending on the idea from HW1, I decided to make a whole solar system of
+planets. There are 4 'types' of planets:
+- An Ocean-style planet (this is taken from my HW1 with some optimizations)
+- A Gas planet (very simple noise-textured sphere with y-axis distortions)
+- A desert planet (layered perlin noise with arid color palette)
+- A rock/ice planet (uses worley noise points and distance to transform input
+to FBM/perlin)
 
-The rest of the material like animation, lighting, noise generation, procedural
-skybox, etc. will be from my experience in CIS 560 and this class.
+I would have liked to explore anisotropic noise for the rock planet to simulate
+desert terrain (and to have a noise type other than Perlin... yeeesh). I may
+revisit it, but the math was too heavy for my tired brain at the end of all my
+projects.
 
-## Design
-The basic design will follow from the interplay between the swarm engine and the
-3D representations of the agents. At this point I am not 100% sure where
-everything should live. My initial thinking is that the swarm algorithm updates
-should occur CPU-side and then be piped over to the GPU via instanced geometry:
+### Swarming Ships
+The ships follow an algorithm close to Boids. The basic idea is that at each
+step, a given ship's position is updated by the following rule:
+
+    x' = x + s * d
+
+Where x' is the new position, x is the old position, s is a configurable speed
+coefficient and d is the ship's direction or heading.
+
+After updating each ship's position, the direction is also updated. I will
+refrain from writing an update formula here since it is likely confusing, and
+will instead give a high level overview:
+
+1. Collision detection is done on all other ships, planets, and the sun: the
+inverse of the squared distance is calculated, and the vector FROM the potential
+colliding object to the ship is added, weighted by the squared distance.
+2. Displacement from the ship's N nearest neighbors is computed and summed (N is
+configurable, and there is an optional maximum distance).
+3. Direction vectors of the nearest N neighbors are summed.
+4. Planets have a "neediness value" that grows quadratically with time 
+(and diminishes when ships are nearby). The the vectors from the ship to all
+planets weighted by neediness and inverse distance are summed.
+5. A "default" swarming formation is calculated by an SDF of a sphere
+around the sun. The vector to the closest point on that sphere is calulated
+and weighted by a configurable coefficient.
+
+All the above values are summed together to get a new vector, and that vector is
+normalized, let's call it v. Then, the new direction vector d is found by:
+
+    d = d * inertia + v * (1 - inertia)
+
+
+## Architecture
+The basic design follows from the interplay between the swarm engine and the
+3D representations of the agents. All the ship positionl and orientational
+calculations are done CPU side and piped into a shader for instanced ships:
 
     ----------------
     |     UI       |
@@ -68,28 +97,35 @@ should occur CPU-side and then be piped over to the GPU via instanced geometry:
     |              |            |               |
     ----------------            -----------------
 
-I am thinking this for my initial approach since the swarm size is not large,
-and generally computing these things CPU side is MUCH simpler. This may, however,
-require me to move it out of WebGL since JavaScript is slow.
+### Rendering stuff
+I also have implemented a partial 2-pass bloom implementation. It proceeds as
+follows:
 
-If I need to, I can look into implementing the algorithm GPU side but I do not
-expect that to be easy.
+1. Using multi-target rendering, all ships are drawn to a separate buffer. The
+main buffer is blurred using a horizontal and vertical gaussian pass. MTR ensures
+that when I combine the framebuffers, the depth testing is done properly.
 
-## Timeline:
-### Milestone 2
-At this point, I will have implemented the core of the swarming algorithm in its
-final form (not sure where it will live -- GPU or CPU), and it should at least
-work for animating simple `GL_POINTS` in 3D.
+2. The blurred image (excluding ships) is averaged together with the original
+image, and tone-mapping is done. Unfortunately, I couldn't figure out how to
+write to textures with more than BYTES per color channel (drawing to float
+textures is not supported in WebGL. Int16/32 are allowed, but that has it's own
+headache I didn't want to deal with), so HDR was not able to be used.
 
-### Milestone 3
-For this milestone, the algorithm should have been extended to work with models
-of the final assets I wish to use, as well as the ability to fully adjust the
-parameters to the swarming algorthm(s) along with specifying a density field.
+3. The bloom-ed planets are drawn alongside the untouched ships, giving the
+planets a bit of a glow (though the color has bled a bit :().
 
-Ideally, there will be a nice space backdrop and some planets to join the tango
-as well, but in the (likely) event this is too much, they will be cut if they
-don't make this milestone.
+## Changes
+I ditched the original Particle Search Optimization method. It turns out that
+it's just what it says it is: an optimization method. It's not meant for flocking
+or agents with orientation. It also likes to converge which is obviously not
+what I was going for.
 
-### Final Submission
-At this point, the lighting and animation should be portfolio quality. I am
-hoping that it evokes the calming wonder that space tends to provide.
+I did however try a number of different implementations of swarming and flocking
+which are still in the 'swarm' source folder.
+
+## References
+- Color palette for sun: https://www.shadertoy.com/view/XlSSzK
+- Bloom inspiration: https://learnopengl.com/Advanced-Lighting/Bloom
+- Space ship model: https://www.cgtrader.com/free-3d-models/space/spaceship/star-sparrow-modular-spaceship
+- Texturing: https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Tutorial/Using_textures_in_WebGL
+- Lots of stuff from 560 and previous homeworks.

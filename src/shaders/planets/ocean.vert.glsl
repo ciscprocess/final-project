@@ -5,6 +5,7 @@ in vec4 vs_Pos;
 in vec4 vs_Nor;
 
 out vec4 fs_Pos;
+out vec4 fs_TransPos;
 out vec4 fs_Nor;
 
 void main() {
@@ -15,5 +16,6 @@ void main() {
 
     fs_Nor = vs_Nor;
     vec4 modelposition = u_Model * vec4(p, 1.f);
+    fs_TransPos = modelposition;
     gl_Position = u_ViewProj * modelposition;
 }

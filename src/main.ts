@@ -18,6 +18,7 @@ import ScreenQuad from './geometry/ScreenQuad';
 import ProceduralPlanet from './geometry/ProceduralPlanet';
 import Framebuffer from './rendering/gl/Framebuffer';
 import PlanetField from './swarm/PlanetField';
+import PostCombineShaderProgram from './rendering/gl/PostCombineShaderProgram';
 
 export interface IIndexable {
   [key: string]: any;
@@ -37,6 +38,7 @@ const controls : IIndexable = {
 
 let fb: Framebuffer;
 let fb2: Framebuffer;
+let fb3: Framebuffer;
 let ship: Ship;
 let quad: ScreenQuad;
 let quad2: ScreenQuad;
@@ -151,6 +153,8 @@ function main() {
   fb.clear();
   fb2 = new Framebuffer(window.innerWidth, window.innerHeight);
   fb2.clear();
+  fb3 = new Framebuffer(window.innerWidth, window.innerHeight);
+  fb3.clear();
   //ctx.fillRect(25, 25, 100, 100);
   //ctx.putImageData(planet.imDat, 0, 0);
 
@@ -186,18 +190,20 @@ function main() {
 
   const postShader = new ShaderProgram([
     new Shader(gl.VERTEX_SHADER, require('./shaders/post/passthrough.vert.glsl')),
-    new Shader(gl.FRAGMENT_SHADER, require('./shaders/post/vertical-blur.frag.glsl')),
+    new Shader(gl.FRAGMENT_SHADER, '#version 300 es\n' + require('./shaders/post/blur.frag.glsl')),
   ], uniformVars);
 
   const horizShader = new ShaderProgram([
     new Shader(gl.VERTEX_SHADER, require('./shaders/post/passthrough.vert.glsl')),
-    new Shader(gl.FRAGMENT_SHADER, require('./shaders/post/horizontal-blur.frag.glsl')),
+    new Shader(gl.FRAGMENT_SHADER, '#version 300 es\n#define BLUR_HORIZONTAL\n' + require('./shaders/post/blur.frag.glsl')),
   ], uniformVars);
 
   const passthrough = new ShaderProgram([
     new Shader(gl.VERTEX_SHADER, require('./shaders/post/passthrough.vert.glsl')),
     new Shader(gl.FRAGMENT_SHADER, require('./shaders/post/passthrough.frag.glsl')),
   ], uniformVars);
+
+  const combine = new PostCombineShaderProgram(uniformVars);
 
   const shipShader = new ShipShaderProgram(uniformVars);
   const spaceShader = new SpaceShaderProgram(uniformVars);
@@ -245,12 +251,13 @@ function main() {
       }
     });
 
+    spaceShader.setCustomUniform('u_Seed', controls['u_Seed']);
     renderer.render(camera, spaceShader, [quad]);
     for (let plan of planetField.planets) {
       let planetShader = planetShaders[plan.type];
       planetShader.setCameraEye(camera.controls.eye);
       plan.updateTransform();
-      planetShader.setCustomUniform('u_Seed', plan.id);
+      planetShader.setCustomUniform('u_Seed', plan.id + controls['u_Seed']);
       renderer.render(camera, planetShader, [planet], plan.transform);
       plan.localYAngle -= plan.yAngleV;
       plan.angleAroundSun += plan.sunAngleV;
@@ -264,10 +271,20 @@ function main() {
     gl.viewport(0, 0, window.innerWidth, window.innerHeight);
     renderer.render(camera, postShader, [quad]);
 
-    fb2.clear();
+    fb3.bind();
+    renderer.clear();
     horizShader.setTextureSlot(fb2.texture, 1);
     gl.viewport(0, 0, window.innerWidth, window.innerHeight);
     renderer.render(camera, horizShader, [quad]);
+
+    fb3.clear();
+    renderer.clear();
+    combine.setTextures(fb.texture, fb3.texture, null, null);
+    renderer.render(camera, combine, [quad]);
+    
+    passthrough.setTextureSlot(fb.auxTexture1, 1);
+    gl.viewport(0, 0, window.innerWidth, window.innerHeight);
+    renderer.render(camera, passthrough, [quad], mat4.fromTranslation(mat4.create(), vec3.fromValues(0, 0, -0.001)));
 
     sunShader.tickTime();
     stats.end();
@@ -282,6 +299,7 @@ function main() {
     camera.updateProjectionMatrix();
     fb.resize(window.innerWidth, window.innerHeight);
     fb2.resize(window.innerWidth, window.innerHeight);
+    fb3.resize(window.innerWidth, window.innerHeight);
   }, false);
 
   renderer.setSize(window.innerWidth, window.innerHeight);

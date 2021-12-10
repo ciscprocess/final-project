@@ -11,14 +11,13 @@ const float u_MountainGrassCutoff = 0.01;
 
 uniform int u_Time;
 uniform float u_Seed;
-uniform vec3 u_CameraEye;
 
 float randomNoise2(vec3 p, float seed) {
     return fract(sin(dot(p, vec3(12.9898, -78.233, 133.999)))  * (43758.5453 + seed + u_Seed));
 }
 
 float randomNoise3(vec2 co){
-    return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
+    return fract(sin(dot(co, vec2(12.9898, 78.233))) * (43758.5453 + u_Seed));
 }
 
 float randomNoise3(vec3 co){

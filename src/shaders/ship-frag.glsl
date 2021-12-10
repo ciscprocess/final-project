@@ -9,7 +9,8 @@ in vec4 fs_Nor;
 in vec4 fs_Col;
 in vec2 fs_UV;
 
-out vec4 out_Col;
+layout (location = 0) out vec4 out_Col;
+layout (location = 1) out vec4 out_Col2;
 
 const vec4 lightPos = vec4(15, 5, 3, 1);
 void main()
@@ -22,5 +23,6 @@ void main()
 
     float ambientTerm = 0.3f;
     float lightIntensity = diffuseTerm + ambientTerm;
-    out_Col = vec4(diffuseColor.xyz * lightIntensity, 1.f);
+    out_Col = vec4(0.f);
+    out_Col2 = vec4(diffuseColor.xyz * lightIntensity, 1.f);
 }

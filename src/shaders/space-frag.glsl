@@ -4,15 +4,12 @@ precision highp int;
 
 uniform mat4 u_InvViewProj;
 uniform ivec2 u_Dimensions;
-uniform vec3 u_Eye;
+uniform float u_Seed;
 
-out vec4 out_Col;
+layout (location = 0) out vec4 out_Col;
+layout (location = 1) out vec4 out_Col2;
 
-vec2 random2( vec2 p ) {
-    return fract(sin(vec2(dot(p, vec2(127.1,311.7)), dot(p,vec2(269.5,183.3)))) * 43758.5453);
-}
-
-vec3 random3( vec3 p ) {
+vec3 random3 (vec3 p) {
     return fract(sin(vec3(dot(p,vec3(127.1, 311.7, 191.999)),
                           dot(p,vec3(269.5, 183.3, 765.54)),
                           dot(p, vec3(420.69, 631.2,109.21))))
@@ -28,32 +25,27 @@ vec3 colorWheelStars(float angle) {
     return (a + b * cos(2.f * 3.14159 * (c * angle + d)));
 }
 
-
+const float rayDotMax = 0.99999995;
+const float rayDotMin = 0.99999;
 void main()
 {
     vec2 ndc = (gl_FragCoord.xy / vec2(u_Dimensions)) * 2.0 - 1.0;
-
     vec4 p = vec4(ndc.xy, 1, 1);
-    p *= 1.0;
     p = u_InvViewProj * p;
+    vec3 rayDir = normalize(p.xyz);
 
-    out_Col = vec4(0.f, 0.f, 0.f, 1.f);
-    vec3 rayDir = normalize(p.xyz - u_Eye);
+    // check 8 octants at once to save looping.
+    // probably should do into 32nd's even, but no time.
     vec3 rayOctants = sign(rayDir);
-    for (int i = 0; i < 40; i++) {
-        vec3 starDir = normalize(random3(vec3(float(i), 1.f + float(i), 2.f)) * rayOctants);
-        
-        const float rayDotMax = 0.99999995;
-        const float rayDotMin = 0.99999;
+    for (int i = 0; i < 14; i++) {
+        vec3 starDir = normalize(random3(vec3(float(i), 1.f + float(i) + u_Seed, 2.f) * rayOctants)* rayOctants);
+        vec3 props = random3(vec3(float(i) + u_Seed, 1.f + float(i), 5.f));
 
-        vec3 props = random3(vec3(float(i), 1.f + float(i), 5.f));
+        // start 'soft' radius.
         float rayDotThresh = mix(rayDotMin, rayDotMax, props.x);
-
-        //const float rayDotMax = 0.99997;
         vec3 white = colorWheelStars(props.x * 2.f) * mix(0.2, 1., props.y);
         out_Col = max(vec4(white * exp((dot(starDir, rayDir) - rayDotThresh) * 130000.f), 1.f), out_Col);
-    //     if (dot(starDir, rayDir) > rayDotMax) {
-    //         out_Col = vec4(1.f);
-    //     }
     }
+
+    out_Col2 = vec4(0.);
 }

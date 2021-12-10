@@ -1,7 +1,8 @@
 in vec4 fs_Pos;
 in vec4 fs_Nor;
 in vec4 fs_PosGlobal;
-out vec4 out_Col;
+layout (location = 0) out vec4 out_Col;
+layout (location = 1) out vec4 out_Col2;
 uniform mat4 u_Model;
 
 vec3 colorWheelGas(float angle) {
@@ -34,4 +35,5 @@ void main() {
     float bf_highlight = max(pow(diffuseTerm, 12.f), 0.f);
     float lightIntensity = diffuseTerm + ambientTerm; 
     out_Col = vec4(diffuseColor.rgb * (lightIntensity + bf_highlight), diffuseColor.a);
+    out_Col2 = vec4(0.f);
 }

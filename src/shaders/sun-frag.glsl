@@ -5,26 +5,22 @@ precision highp int;
 
 uniform vec4 u_Color; // The color with which to render this instance of geometry.
 uniform sampler2D u_Sampler;
+uniform float u_Seed;
 
 in vec4 fs_Pos;
 in vec4 fs_Nor;
 in vec4 fs_Col;
 
-out vec4 out_Col;
+
+layout (location = 0) out vec4 out_Col;
+layout (location = 1) out vec4 out_Col2;
 
 const vec4 lightPos = vec4(15, 5, 3, 1);
 
 uniform int u_Time;
 
-// Noise function candidate 1 (based on golden ratio)
-// From: https://stackoverflow.com/a/28095165
-const float PHI = 1.61803398874989484820459;
-float randomNoise1(in vec3 xyz, in float seed) {
-    return fract(sin(distance(xyz * PHI, xyz)) * xyz.x);
-}
-
 float randomNoise2(vec3 p, float seed) {
-    return fract(sin(dot(p, vec3(12.9898, -78.233, 133.999)))  * (43758.5453 + seed));
+    return fract(sin(dot(p, vec3(12.9898, -78.233, 133.999)))  * (43758.5453 + seed + u_Seed));
 }
 
 float randomNoise3(vec2 co){
@@ -40,29 +36,13 @@ float bias(float time, float bias) {
     return (time / ((((1.0 / bias) - 2.0) * (1.0 - time)) + 1.0));
 }
 
-float gain(float time, float gain) {
-    if (time < 0.5) {
-        return bias(time * 2.0, gain) / 2.0;
-    } else {
-        return bias(time * 2.0 - 1.0, 1.0 - gain) / 2.0 + 0.5;
-    }
-}
-
-vec3 normalizeNZ(vec3 v) {
-    if (v.x == 0.f && v.y == 0.f && v.z == 0.f) {
-        return v;
-    } else {
-        return v;//normalize(v);
-    }
-}
-
 vec3 getLatticeVector(ivec3 p, float cutoff, float seed) {
     vec3 p2 = vec3(float(p.x), float(p.y), float(p.z));
     float x = -1.f + 2.f * randomNoise2(p2, 1201.f + seed);
     float y = -1.f + 2.f * randomNoise2(p2, 44402.f + seed);
     float z = -1.f + 2.f * randomNoise2(p2, 23103.f + seed);
 
-    return normalizeNZ(vec3(x, y, z));
+    return vec3(x, y, z);
 }
 
 float interpQuintic(float x, float a, float b) {
@@ -106,9 +86,6 @@ const vec3 tflv2 = vec3(0.f, 1.f, 1.f);
 
 const float sqrt3 = 1.732050807568877;
 float perlin(vec3 p, float voxelSize, float nonZeroCutoff, float seed) {
-    p.x += 100.f;
-    p.y += 100.f;
-    p.z += 100.f;
     p /= voxelSize;
     vec3 lp2 = floor(p);
     ivec3 lp = ivec3(floor(p.x), floor(p.y), floor(p.z));
@@ -122,15 +99,15 @@ float perlin(vec3 p, float voxelSize, float nonZeroCutoff, float seed) {
     vec3 tfr = getLatticeVector(lp + tfrv, nonZeroCutoff, seed);
     vec3 tfl = getLatticeVector(lp + tflv, nonZeroCutoff, seed);
 
-    float dotBnl = dot(normalizeNZ(p - lp2), bnl);
-    float dotBnr = dot(normalizeNZ(p - lp2 - bnrv2), bnr);
-    float dotBfr = dot(normalizeNZ(p - lp2 - bfrv2), bfr);
-    float dotBfl = dot(normalizeNZ(p - lp2 - bflv2), bfl);
+    float dotBnl = dot(p - lp2, bnl);
+    float dotBnr = dot(p - lp2 - bnrv2, bnr);
+    float dotBfr = dot(p - lp2 - bfrv2, bfr);
+    float dotBfl = dot(p - lp2 - bflv2, bfl);
 
-    float dotTnl = dot(normalizeNZ(p - lp2 - tnlv2), tnl);
-    float dotTnr = dot(normalizeNZ(p - lp2 - tnrv2), tnr);
-    float dotTfr = dot(normalizeNZ(p - lp2 - tfrv2), tfr);
-    float dotTfl = dot(normalizeNZ(p - lp2 - tflv2), tfl);
+    float dotTnl = dot(p - lp2 - tnlv2, tnl);
+    float dotTnr = dot(p - lp2 - tnrv2, tnr);
+    float dotTfr = dot(p - lp2 - tfrv2, tfr);
+    float dotTfl = dot(p - lp2 - tflv2, tfl);
 
     return (sqrt3/2.f + interpQuintic3D(p, dotBnl, dotBnr, dotBfr, dotBfl, dotTnl, dotTnr, dotTfr, dotTfl)) / sqrt3;
 }
@@ -176,8 +153,5 @@ void main()
     vec3 col = firePalette(bias(t, 0.65));
 
     out_Col = vec4(col, 1.f); //vec4(diffuseColor.xyz * lightIntensity, 1.f);
-
-    // if (sph.x < 0. || sph.y < 0. || sph.z < 0.) {
-    //     out_Col = vec4(1., 0., 0., 1.);
-    // }
+    out_Col2 = vec4(0.f);
 }
